@@ -1,0 +1,1299 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a7d5a">
+<title>تراث ← Word | محول EPUB المباشر</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/dist/index.umd.cjs"></script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f6f2ea;
+  --surface: #ffffff;
+  --surface-2: #fbfaf6;
+  --text: #1a1a1a;
+  --text-muted: #6a6a6a;
+  --primary: #0a7d5a;
+  --primary-dark: #075a42;
+  --primary-light: #d9f0e6;
+  --border: #e5e0d5;
+  --danger: #b91c1c;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 16px rgba(10, 125, 90, 0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 40px rgba(10, 125, 90, 0.12);
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+}
+
+body { padding: 24px 16px 64px; }
+
+.app { max-width: 680px; margin: 0 auto; }
+
+.header { text-align: center; padding: 20px 0 28px; }
+
+.header .logo {
+  width: 58px; height: 58px;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-lg);
+}
+
+.header .logo svg {
+  width: 30px; height: 30px;
+  stroke: #fff; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+
+.header h1 {
+  font-family: 'Amiri', serif;
+  font-size: 32px; font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+
+.header h1 .arrow {
+  color: var(--primary);
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 400;
+  margin: 0 4px;
+}
+
+.header .tagline {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.header .badge-gh {
+  display: inline-block;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-top: 8px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.card--secondary {
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.card .card-title {
+  font-family: 'Amiri', serif;
+  font-size: 20px; font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card .card-desc {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 18px;
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface-2);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.dropzone:hover, .dropzone.is-dragover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.dropzone-icon {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.dropzone-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: var(--primary);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dropzone-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.dropzone-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.file-input-hidden {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.meta-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.meta-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 540px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
+.field-group {
+  margin-bottom: 12px;
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.select-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 8px;
+}
+
+.toggle-label input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 17px;
+  height: 17px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Tajawal', sans-serif;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  box-shadow: var(--shadow);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-weight: 500;
+  font-size: 14px;
+  padding: 10px 16px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--text-muted);
+}
+
+.btn-sm {
+  width: auto;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.progress-container {
+  margin-top: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  height: 12px;
+  display: none;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), #10b981);
+  transition: width 0.2s ease;
+}
+
+.status {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+  margin-top: 16px;
+  transition: all 0.2s;
+  white-space: pre-wrap;
+}
+
+.status[data-state="loading"] {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.status[data-state="success"] {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.status[data-state="error"] {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+.guide-box {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.guide-box h3 {
+  font-family: 'Amiri', serif;
+  font-size: 18px;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+}
+
+.guide-box ol {
+  padding-right: 20px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.guide-box ol li {
+  margin-bottom: 6px;
+}
+
+.page-footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 40px;
+  line-height: 1.9;
+}
+
+.page-footer a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.page-footer a:hover {
+  text-decoration: underline;
+}
+
+.badge-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      </svg>
+    </div>
+    <h1>تراث <span class="arrow">←</span> Word</h1>
+    <p class="tagline">تحويل كتب EPUB إلى مستندات Word منسقة بدقة وفق معايير التراث الذهبية</p>
+    <div class="badge-gh">نسخة GitHub Pages · تعمل في المتصفح محليًا 100% بدون خادم</div>
+  </header>
+
+  <main>
+    <!-- Dropzone Card -->
+    <section class="card">
+      <div id="dropZone" class="dropzone">
+        <input
+          id="epubInput"
+          type="file"
+          class="file-input-hidden"
+          accept=".epub,application/epub+zip"
+        >
+        <div class="dropzone-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </div>
+        <div class="dropzone-title">اسحب ملف EPUB وأفلته هنا أو اضغط للاختيار</div>
+        <div class="dropzone-subtitle">اختر ملف كتاب بصيغة .epub من جهازك</div>
+      </div>
+
+      <!-- File Details (Hidden until selected) -->
+      <div id="fileInfoBox" style="display: none; margin-top: 18px;">
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">اسم الملف</span>
+            <div id="metaFileName" class="meta-value">—</div>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">حجم الملف</span>
+            <div id="metaFileSize" class="meta-value">—</div>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">عنوان الكتاب المستخرج</span>
+            <div id="metaBookTitle" class="meta-value">—</div>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">المؤلف</span>
+            <div id="metaAuthor" class="meta-value">—</div>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">عدد ملفات الفصول/الأجزاء</span>
+            <div id="metaSpineCount" class="meta-value">—</div>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">اللغة</span>
+            <div id="metaLanguage" class="meta-value">العربية</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; text-align: left;">
+          <button id="btnResetFile" type="button" class="btn btn-secondary btn-sm">
+            اختيار ملف آخر
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Card -->
+    <section class="card card--secondary">
+      <div class="card-title">
+        <span>خيارات التنسيق والطباعة</span>
+        <span class="badge-tag">معايير Golden</span>
+      </div>
+      <p class="card-desc">تطبيق التنسيق الطباعي التراثي المستخدم في موقع تراث</p>
+
+      <div class="settings-grid">
+        <div class="field-group">
+          <label class="field-label" for="fontFamilySelect">نوع الخط العربي الأساسي</label>
+          <select id="fontFamilySelect" class="select-input">
+            <option value="Traditional Arabic" selected>Traditional Arabic (المعتمد في التراث)</option>
+            <option value="Amiri">Amiri (الخط الأميري)</option>
+            <option value="Sakkal Majalla">Sakkal Majalla (مجلة)</option>
+            <option value="Simplified Arabic">Simplified Arabic (المبسط)</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="fontSizeSelect">حجم خط المتن (العناوين 17pt)</label>
+          <select id="fontSizeSelect" class="select-input">
+            <option value="28" selected>14 pt (المعيار الذهبي الأصلي)</option>
+            <option value="32">16 pt (كبير للقراءة المريحة)</option>
+            <option value="24">12 pt (مضغوط للطباعة الموفرة)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px;">
+        <label class="toggle-label">
+          <input id="optPageBreak" type="checkbox" checked>
+          <span>بدء كل فصل رئيسي في صفحة جديدة (Page Break)</span>
+        </label>
+        <label class="toggle-label">
+          <input id="optCoverPage" type="checkbox" checked>
+          <span>إنشاء صفحة غلاف (صفحة عنوان) في بداية المستند</span>
+        </label>
+        <label class="toggle-label">
+          <input id="optGoldenSettings" type="checkbox" checked>
+          <span>تطبيق معالجة XML الذهبية (إزالة أخطاء تحجيم الخط في Word + حقول ترقيم الصفحات الحية)</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Convert Button -->
+    <div style="margin-bottom: 16px;">
+      <button id="btnConvert" type="button" class="btn" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        تحويل إلى مستند Word (.docx)
+      </button>
+    </div>
+
+    <!-- Progress & Status -->
+    <div id="progressContainer" class="progress-container">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+
+    <div id="statusBox" class="status">جاهز. اختر أو اسحب ملف كتاب بصيغة EPUB للبدء.</div>
+
+    <!-- Direct Download Button (Hidden until completed) -->
+    <div id="downloadContainer" style="display: none; margin-top: 14px;">
+      <a id="downloadLink" class="btn" href="#" download>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        تحميل ملف Word المولد الآن
+      </a>
+    </div>
+
+    <!-- Guide Box -->
+    <section class="guide-box">
+      <h3>كيف تنشر هذه النسخة على GitHub Pages؟</h3>
+      <ol>
+        <li>احفظ ملف <code>index.html</code> هذا في مستودعك على GitHub.</li>
+        <li>ادخل إلى إعدادات المستودع (Settings) ثم اختر (Pages).</li>
+        <li>في قسم Source اختر الفرع (main) واضغط (Save).</li>
+        <li>سيعطيك GitHub رابط موقعك المباشر ليعمل لديك مجانًا وبدون الحاجة لأي سيرفر إطلاقًا.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    معالجة محلية 100% في المتصفح · لا يُرفع الملف لأي خادم خارجي · متوافق مع كافة برامج قراءة الكتب
+  </footer>
+</div>
+
+<script>
+// Global state
+let currentFile = null;
+let parsedEpubData = null;
+
+// DOM Elements
+const epubInput = document.getElementById("epubInput");
+const dropZone = document.getElementById("dropZone");
+const fileInfoBox = document.getElementById("fileInfoBox");
+const metaFileName = document.getElementById("metaFileName");
+const metaFileSize = document.getElementById("metaFileSize");
+const metaBookTitle = document.getElementById("metaBookTitle");
+const metaAuthor = document.getElementById("metaAuthor");
+const metaSpineCount = document.getElementById("metaSpineCount");
+const metaLanguage = document.getElementById("metaLanguage");
+const btnResetFile = document.getElementById("btnResetFile");
+const btnConvert = document.getElementById("btnConvert");
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
+const statusBox = document.getElementById("statusBox");
+const downloadContainer = document.getElementById("downloadContainer");
+const downloadLink = document.getElementById("downloadLink");
+
+const fontFamilySelect = document.getElementById("fontFamilySelect");
+const fontSizeSelect = document.getElementById("fontSizeSelect");
+const optPageBreak = document.getElementById("optPageBreak");
+const optCoverPage = document.getElementById("optCoverPage");
+const optGoldenSettings = document.getElementById("optGoldenSettings");
+
+// Helpers
+function formatBytes(bytes) {
+  if (bytes === 0) return "0 Byte";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+function cleanText(text) {
+  return String(text || "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/[ \t]*\n[ \t]*/g, "\n")
+    .trim();
+}
+
+function isJunk(text) {
+  const t = cleanText(text);
+  if (!t) return true;
+  if (t === "." || t === "ـ" || t === "ــ") return true;
+  return /^[.\-ـ…•·_*=\s]{2,}$/.test(t);
+}
+
+function isNumberPrefix(text) {
+  return /^[0-9٠-٩]+[\s\-–—ـ]*$/.test(cleanText(text));
+}
+
+function isStructuralPrefix(text) {
+  let t = cleanText(text);
+  if (!t || t.length > 60) return false;
+  t = t.replace(/^[\s:؛،,.\-ـ]+|[\s:؛،,.\-ـ]+$/g, "");
+  return t.length >= 3 && t.startsWith("(") && t.endsWith(")");
+}
+
+function smartMerge(blocks) {
+  const out = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const current = blocks[i];
+    const text = cleanText(current.text);
+
+    if (
+      current.type !== "heading" &&
+      isNumberPrefix(text) &&
+      i + 2 < blocks.length &&
+      blocks[i + 1].type !== "heading" &&
+      isStructuralPrefix(blocks[i + 1].text)
+    ) {
+      out.push({
+        type: "paragraph",
+        text: text + " " + cleanText(blocks[i + 1].text) + " " + cleanText(blocks[i + 2].text)
+      });
+      i += 3;
+      continue;
+    }
+
+    if (
+      current.type !== "heading" &&
+      isStructuralPrefix(text) &&
+      i + 1 < blocks.length
+    ) {
+      out.push({
+        type: "paragraph",
+        text: text + " " + cleanText(blocks[i + 1].text)
+      });
+      i += 2;
+      continue;
+    }
+
+    out.push(current);
+    i++;
+  }
+  return out;
+}
+
+function setProgress(pct, message) {
+  progressContainer.style.display = "block";
+  progressBar.style.width = Math.min(100, Math.max(0, pct)) + "%";
+  if (message) {
+    statusBox.textContent = message;
+    statusBox.setAttribute("data-state", "loading");
+  }
+}
+
+function resolvePath(baseDir, relativePath) {
+  const cleanRelative = decodeURIComponent(relativePath.split('#')[0].split('?')[0]);
+  if (!baseDir) return cleanRelative;
+  const full = baseDir + '/' + cleanRelative;
+  const parts = full.split('/');
+  const stack = [];
+  for (const p of parts) {
+    if (!p || p === '.') continue;
+    if (p === '..') {
+      if (stack.length) stack.pop();
+    } else {
+      stack.push(p);
+    }
+  }
+  return stack.join('/');
+}
+
+// EPUB Parser
+async function parseEpubFile(file) {
+  setProgress(10, "فتح ملف الـ EPUB وفك الضغط...");
+  const zip = await JSZip.loadAsync(file);
+
+  // 1. Locate container.xml
+  let opfPath = "";
+  const containerFile = zip.file("META-INF/container.xml");
+  if (containerFile) {
+    const containerXml = await containerFile.async("string");
+    const parser = new DOMParser();
+    const containerDoc = parser.parseFromString(containerXml, "text/xml");
+    const rootfile = containerDoc.querySelector("rootfile");
+    if (rootfile) {
+      opfPath = rootfile.getAttribute("full-path") || "";
+    }
+  }
+
+  if (!opfPath) {
+    const opfFiles = Object.keys(zip.files).filter(k => /\.opf$/i.test(k));
+    if (opfFiles.length > 0) opfPath = opfFiles[0];
+  }
+
+  if (!opfPath || !zip.file(opfPath)) {
+    throw new Error("ملف EPUB غير صالح: لم يتم العثور على ملف التعريف OPF.");
+  }
+
+  setProgress(25, "قراءة بيانات الكتاب (العنوان، المؤلف، الفهرس)...");
+  const opfDir = opfPath.includes("/") ? opfPath.substring(0, opfPath.lastIndexOf("/")) : "";
+  const opfContent = await zip.file(opfPath).async("string");
+  const parser = new DOMParser();
+  const opfDoc = parser.parseFromString(opfContent, "text/xml");
+
+  const titleEl = opfDoc.querySelector("title");
+  const bookTitle = cleanText(titleEl ? titleEl.textContent : file.name.replace(/\.epub$/i, ""));
+
+  const creatorEl = opfDoc.querySelector("creator");
+  const authorName = cleanText(creatorEl ? creatorEl.textContent : "");
+
+  const langEl = opfDoc.querySelector("language");
+  const language = cleanText(langEl ? langEl.textContent : "ar");
+
+  // Manifest mapping
+  const manifest = new Map();
+  const itemEls = opfDoc.querySelectorAll("manifest > item");
+  itemEls.forEach(item => {
+    const id = item.getAttribute("id");
+    const href = item.getAttribute("href");
+    const mediaType = item.getAttribute("media-type") || "";
+    manifest.set(id, { href, mediaType });
+  });
+
+  // Spine sequence
+  const itemrefEls = opfDoc.querySelectorAll("spine > itemref");
+  const spineFiles = [];
+  itemrefEls.forEach(ref => {
+    const idref = ref.getAttribute("idref");
+    const item = manifest.get(idref);
+    if (item && item.href) {
+      const resolved = resolvePath(opfDir, item.href);
+      spineFiles.push(resolved);
+    }
+  });
+
+  if (spineFiles.length === 0) {
+    const htmlFiles = Object.keys(zip.files).filter(k => /\.(x?html|xml)$/i.test(k) && !/toc|nav/i.test(k));
+    spineFiles.push(...htmlFiles.sort());
+  }
+
+  return {
+    zip,
+    bookTitle: bookTitle || file.name.replace(/\.epub$/i, ""),
+    authorName,
+    language,
+    spineFiles
+  };
+}
+
+// Extract blocks from an HTML/XHTML chapter file
+function extractBlocksFromHtml(htmlStr) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlStr, "text/html");
+
+  // Remove scripts and stylesheets
+  const badElements = doc.querySelectorAll("script, style, link, meta, noscript, svg");
+  badElements.forEach(el => el.remove());
+
+  const blocks = [];
+  let buffer = "";
+
+  function flush() {
+    const text = cleanText(buffer);
+    buffer = "";
+    if (!isJunk(text)) {
+      const parts = text.split(/\n+/).map(cleanText).filter(x => !isJunk(x));
+      for (const p of parts) {
+        blocks.push({
+          type: "paragraph",
+          text: p
+        });
+      }
+    }
+  }
+
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      buffer += node.textContent || "";
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    const tag = node.tagName.toLowerCase();
+
+    // Check for explicit pagebreak
+    const isPageBreak = node.getAttribute("epub:type") === "pagebreak" ||
+                        node.getAttribute("data-type") === "pagebreak" ||
+                        (node.className && typeof node.className === "string" && /(?:^|\s)(?:pagebreak|page-break|pageno)(?:\s|$)/i.test(node.className));
+
+    if (isPageBreak) {
+      flush();
+      const pageVal = node.getAttribute("title") || node.getAttribute("data-page") || cleanText(node.textContent);
+      blocks.push({
+        type: "pagebreak",
+        page: pageVal || null
+      });
+      return;
+    }
+
+    // Heading tags
+    const isHeadingTag = /^h[1-6]$/.test(tag);
+    const isTitleAttr = node.getAttribute("data-type") === "title" ||
+                        (node.className && typeof node.className === "string" && /(?:^|\s)(?:title|heading|chapter-title|bab|fasl|qism)(?:\s|$)/i.test(node.className));
+
+    if (isHeadingTag || isTitleAttr) {
+      flush();
+      const text = cleanText(node.textContent);
+      if (!isJunk(text)) {
+        blocks.push({
+          type: "heading",
+          text
+        });
+      }
+      return;
+    }
+
+    if (tag === "br") {
+      buffer += "\n";
+      return;
+    }
+
+    const isBlock = ["p", "div", "section", "article", "blockquote", "li", "tr"].includes(tag);
+    if (isBlock) {
+      flush();
+    }
+
+    for (const child of node.childNodes) {
+      walk(child);
+    }
+
+    if (isBlock) {
+      flush();
+    }
+  }
+
+  walk(doc.body || doc);
+  flush();
+
+  return smartMerge(blocks);
+}
+
+// DOCX Helpers
+function makeCoverPage(opts) {
+  const lines = [
+    { text: opts.bookTitle, size: 36, bold: true, before: 3600 },
+  ];
+  if (opts.authorName) {
+    lines.push({ text: "المؤلف: " + opts.authorName, size: 26, bold: false, before: 800 });
+  }
+  lines.push({ text: opts.spineCount + " فصل / قسم مصدري", size: 22, bold: false, before: 1600 });
+  lines.push({ text: "تم التحويل محليًا بواسطة turath2docx (نسخة EPUB)", size: 18, bold: false, before: 600 });
+  lines.push({ text: "نسخة منسقة بدقة وفق معايير التراث الذهبية", size: 18, bold: false, before: 400 });
+
+  return lines.map(line => {
+    return new docx.Paragraph({
+      bidirectional: true,
+      alignment: docx.AlignmentType.CENTER,
+      spacing: { before: line.before, after: 0, line: 240, lineRule: "auto" },
+      children: [
+        new docx.TextRun({
+          text: line.text,
+          font: opts.fontFamily,
+          rightToLeft: true,
+          size: line.size,
+          bold: line.bold
+        })
+      ]
+    });
+  });
+}
+
+function emptyFooter() {
+  return new docx.Footer({
+    children: [new docx.Paragraph({ children: [] })]
+  });
+}
+
+function makeFooter(volStr, fontName) {
+  const footerText = volStr ? `الجزء ${volStr} | الصفحة {{PAGE}}` : `الصفحة {{PAGE}}`;
+  return new docx.Footer({
+    children: [
+      new docx.Paragraph({
+        bidirectional: true,
+        alignment: docx.AlignmentType.CENTER,
+        spacing: { before: 0, after: 0 },
+        children: [
+          new docx.TextRun({
+            text: footerText,
+            font: fontName,
+            rightToLeft: true,
+            size: 20
+          })
+        ]
+      })
+    ]
+  });
+}
+
+function makeParagraph(block, firstOnPage, fontFamily, bodyFontSize) {
+  const isHeading = block.type === "heading";
+  return new docx.Paragraph({
+    bidirectional: true,
+    alignment: isHeading ? docx.AlignmentType.CENTER : docx.AlignmentType.JUSTIFIED,
+    pageBreakBefore: firstOnPage,
+    keepNext: false,
+    keepLines: false,
+    widowControl: false,
+    spacing: {
+      before: isHeading ? 120 : 0,
+      after: isHeading ? 120 : 0,
+      line: 240,
+      lineRule: "auto"
+    },
+    children: [
+      new docx.TextRun({
+        text: block.text,
+        font: fontFamily,
+        rightToLeft: true,
+        size: isHeading ? 34 : bodyFontSize,
+        bold: isHeading
+      })
+    ]
+  });
+}
+
+// XML Post-Processing Patches
+async function applyGoldenSettings(blob) {
+  const zip = await JSZip.loadAsync(blob);
+  const settingsFile = zip.file("word/settings.xml");
+  if (!settingsFile) return blob;
+  let xml = await settingsFile.async("string");
+
+  xml = xml.replace(/(<w:compatSetting\b[^>]*\bw:name="compatibilityMode"[^>]*\bw:val=")15(")/, "$114$2");
+  xml = xml.replace(/<w:compatSetting\b([^>]*\bw:name="compatibilityMode"[^>]*)\/>/g, m => m.replace(/\bw:val="[^"]*"/, 'w:val="14"'));
+  xml = xml.replace(/<w:defaultTabStop\b[^>]*\/>/g, "");
+  xml = xml.replace(/<w:characterSpacingControl\b[^>]*\/>/g, "");
+  xml = xml.replace(/<w:compat\b/,
+    '<w:defaultTabStop w:val="720"/>' +
+    '<w:characterSpacingControl w:val="doNotCompress"/>' +
+    '<w:compat');
+  xml = xml.replace(/<w:compat\b([^>]*)>/, m => m +
+    '<w:useFELayout/>' +
+    '<w:compatSetting w:name="overrideTableStyleFontSizeAndJustification" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/>' +
+    '<w:compatSetting w:name="enableOpenTypeFeatures" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/>' +
+    '<w:compatSetting w:name="doNotFlipMirrorIndents" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/>');
+
+  zip.file("word/settings.xml", xml);
+  return await zip.generateAsync({
+    type: "blob",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 }
+  });
+}
+
+async function patchRunProps(blob) {
+  const zip = await JSZip.loadAsync(blob);
+  const docFile = zip.file("word/document.xml");
+  if (!docFile) return blob;
+  let xml = await docFile.async("string");
+  xml = xml.replace(/<w:szCs\b[^>]*\/>/g, "");
+  xml = xml.replace(/<w:bCs\b[^>]*\/>/g, "");
+  zip.file("word/document.xml", xml);
+  return await zip.generateAsync({
+    type: "blob",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 }
+  });
+}
+
+async function patchFooterField(blob) {
+  const zip = await JSZip.loadAsync(blob);
+  const names = Object.keys(zip.files).filter(n => /^word\/footer\d+\.xml$/.test(n));
+  for (const name of names) {
+    let xml = await zip.file(name).async("string");
+    if (xml.indexOf("{{PAGE}}") === -1) continue;
+    xml = xml.replace(/<w:r\b[^>]*>[\s\S]*?<\/w:r>/g, function (runXml) {
+      if (runXml.indexOf("{{PAGE}}") === -1) return runXml;
+      const rprMatch = runXml.match(/<w:rPr\b[^>]*>[\s\S]*?<\/w:rPr>/);
+      const rpr = rprMatch ? rprMatch[0] : "";
+      const textMatch = runXml.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/);
+      if (!textMatch) return runXml;
+      const fullText = textMatch[1];
+      const idx = fullText.indexOf("{{PAGE}}");
+      const before = fullText.slice(0, idx);
+      const after = fullText.slice(idx + "{{PAGE}}".length);
+      let out = "";
+      if (before) out += "<w:r>" + rpr + '<w:t xml:space="preserve">' + before + "</w:t></w:r>";
+      out += '<w:fldSimple w:instr=" PAGE "><w:r>' + rpr + "<w:t>1</w:t></w:r></w:fldSimple>";
+      if (after) out += "<w:r>" + rpr + '<w:t xml:space="preserve">' + after + "</w:t></w:r>";
+      return out;
+    });
+    zip.file(name, xml);
+  }
+  const settingsFile = zip.file("word/settings.xml");
+  if (settingsFile) {
+    let sx = await settingsFile.async("string");
+    sx = sx.replace(/<w:evenAndOddHeaders[^>]*\/>/g, "");
+    sx = sx.replace(/<w:evenAndOddHeaders[^>]*>[\s\S]*?<\/w:evenAndOddHeaders>/g, "");
+    zip.file("word/settings.xml", sx);
+  }
+  return await zip.generateAsync({
+    type: "blob",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 }
+  });
+}
+
+// UI Handling: File selection
+async function handleFileSelected(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".epub") && file.type !== "application/epub+zip") {
+    statusBox.textContent = "يرجى اختيار ملف بصيغة .epub فقط.";
+    statusBox.setAttribute("data-state", "error");
+    return;
+  }
+
+  currentFile = file;
+  downloadContainer.style.display = "none";
+  statusBox.removeAttribute("data-state");
+
+  try {
+    parsedEpubData = await parseEpubFile(file);
+
+    metaFileName.textContent = file.name;
+    metaFileSize.textContent = formatBytes(file.size);
+    metaBookTitle.textContent = parsedEpubData.bookTitle;
+    metaAuthor.textContent = parsedEpubData.authorName || "غير محدد";
+    metaSpineCount.textContent = parsedEpubData.spineFiles.length + " ملف";
+    metaLanguage.textContent = parsedEpubData.language || "ar";
+
+    fileInfoBox.style.display = "block";
+    btnConvert.disabled = false;
+    statusBox.textContent = `✓ تم تحميل ملف "${file.name}" بنجاح (${parsedEpubData.spineFiles.length} قسم/فصل).\nاضغط على "تحويل إلى مستند Word" للبدء.`;
+    statusBox.setAttribute("data-state", "success");
+    progressContainer.style.display = "none";
+  } catch (err) {
+    console.error(err);
+    statusBox.textContent = "فشل في قراءة ملف الـ EPUB:\n" + err.message;
+    statusBox.setAttribute("data-state", "error");
+    btnConvert.disabled = true;
+    fileInfoBox.style.display = "none";
+  }
+}
+
+// Event Listeners
+epubInput.addEventListener("change", (e) => {
+  if (e.target.files && e.target.files[0]) {
+    handleFileSelected(e.target.files[0]);
+  }
+});
+
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("is-dragover");
+});
+
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("is-dragover");
+});
+
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("is-dragover");
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    handleFileSelected(e.dataTransfer.files[0]);
+  }
+});
+
+btnResetFile.addEventListener("click", () => {
+  currentFile = null;
+  parsedEpubData = null;
+  epubInput.value = "";
+  fileInfoBox.style.display = "none";
+  btnConvert.disabled = true;
+  downloadContainer.style.display = "none";
+  progressContainer.style.display = "none";
+  statusBox.textContent = "جاهز. اختر أو اسحب ملف كتاب بصيغة EPUB للبدء.";
+  statusBox.removeAttribute("data-state");
+});
+
+// Conversion Process
+btnConvert.addEventListener("click", async () => {
+  if (!parsedEpubData || !parsedEpubData.zip) return;
+
+  btnConvert.disabled = true;
+  downloadContainer.style.display = "none";
+  const startTime = performance.now();
+
+  try {
+    const fontFamily = fontFamilySelect.value;
+    const bodyFontSize = Number(fontSizeSelect.value);
+    const needPageBreak = optPageBreak.checked;
+    const needCoverPage = optCoverPage.checked;
+    const needGoldenSettings = optGoldenSettings.checked;
+
+    const spineFiles = parsedEpubData.spineFiles;
+    const totalSpine = spineFiles.length;
+    const allChapters = [];
+
+    // Parse each spine file
+    for (let idx = 0; idx < totalSpine; idx++) {
+      const filePath = spineFiles[idx];
+      const pct = 30 + Math.floor((idx / totalSpine) * 40);
+      setProgress(pct, `معالجة فصول الكتاب: جاري قراءة الفصل ${idx + 1} من ${totalSpine}...`);
+
+      const fileObj = parsedEpubData.zip.file(filePath);
+      if (fileObj) {
+        const htmlStr = await fileObj.async("string");
+        const blocks = extractBlocksFromHtml(htmlStr);
+        if (blocks.length > 0) {
+          allChapters.push(blocks);
+        }
+      }
+      // Yield to event loop to keep UI responsive
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    if (allChapters.length === 0) {
+      throw new Error("لم يتم العثور على نصوص صالحة داخل فصول ملف الـ EPUB.");
+    }
+
+    setProgress(75, "بناء هيكل مستند Word وإعداد الصفحات والهوامش...");
+
+    // Standard A4 section properties
+    const sectionProps = {
+      page: {
+        size: { width: 11906, height: 16838 },
+        margin: {
+          top: 794, bottom: 794,
+          left: 907, right: 907,
+          footer: 283
+        }
+      }
+    };
+
+    const sections = [];
+
+    // 1. Cover / Title Page
+    if (needCoverPage) {
+      sections.push({
+        properties: sectionProps,
+        footers: {
+          default: emptyFooter(),
+          even: emptyFooter(),
+          first: emptyFooter()
+        },
+        children: makeCoverPage({
+          bookTitle: parsedEpubData.bookTitle,
+          authorName: parsedEpubData.authorName,
+          spineCount: totalSpine,
+          fontFamily
+        })
+      });
+    }
+
+    // 2. Book Content Section
+    const bookChildren = [];
+    let totalParagraphCount = 0;
+
+    for (let cIdx = 0; cIdx < allChapters.length; cIdx++) {
+      const chapterBlocks = allChapters[cIdx];
+      for (let bIdx = 0; bIdx < chapterBlocks.length; bIdx++) {
+        const block = chapterBlocks[bIdx];
+        if (block.type === "pagebreak") continue;
+
+        // Is page start?
+        const isChapterStart = (bIdx === 0);
+        const isDocStart = (cIdx === 0 && bIdx === 0 && !needCoverPage);
+        const shouldBreak = needPageBreak && isChapterStart && !isDocStart;
+
+        bookChildren.push(
+          makeParagraph(block, shouldBreak, fontFamily, bodyFontSize)
+        );
+        totalParagraphCount++;
+      }
+    }
+
+    sections.push({
+      properties: {
+        ...sectionProps,
+        page: {
+          ...sectionProps.page,
+          pageNumbers: { start: 1 }
+        }
+      },
+      footers: {
+        default: makeFooter(null, fontFamily),
+        even: makeFooter(null, fontFamily),
+        first: makeFooter(null, fontFamily)
+      },
+      children: bookChildren
+    });
+
+    setProgress(85, "توليد ملف DOCX وتطبيق إعدادات الخطوط...");
+    const documentFile = new docx.Document({
+      evenAndOddHeaderAndFooters: false,
+      sections
+    });
+
+    const rawBlob = await docx.Packer.toBlob(documentFile);
+
+    let finalBlob = rawBlob;
+
+    if (needGoldenSettings) {
+      setProgress(90, "تطبيق إعدادات Golden على بنية XML (Word compatibility & OpenType)...");
+      const settingsBlob = await applyGoldenSettings(finalBlob);
+
+      setProgress(95, "إزالة محددات الحجم المعقدة (szCs & bCs) وإدراج حقول الترقيم الحية...");
+      const propsBlob = await patchRunProps(settingsBlob);
+      finalBlob = await patchFooterField(propsBlob);
+    }
+
+    setProgress(100, "✓ اكتمل التحويل بنجاح!");
+
+    const durationSec = ((performance.now() - startTime) / 1000).toFixed(1);
+    const safeTitle = (parsedEpubData.bookTitle || "book").replace(/[\\/:*?"<>|]/g, "-");
+    const downloadFileName = `${safeTitle}-turath.docx`;
+
+    // Trigger auto-download
+    const blobUrl = URL.createObjectURL(finalBlob);
+    const tempLink = document.createElement("a");
+    tempLink.href = blobUrl;
+    tempLink.download = downloadFileName;
+    tempLink.click();
+
+    // Prepare manual download link
+    downloadLink.href = blobUrl;
+    downloadLink.download = downloadFileName;
+    downloadContainer.style.display = "block";
+
+    statusBox.textContent =
+      `✓ تم إنشاء مستند Word بنجاح!\n` +
+      `العنوان: ${parsedEpubData.bookTitle}\n` +
+      `الفصول المعالجة: ${allChapters.length}\n` +
+      `إجمالي الفقرات: ${totalParagraphCount}\n` +
+      `حجم ملف Word الناتج: ${formatBytes(finalBlob.size)}\n` +
+      `استغرق التحويل: ${durationSec} ثانية`;
+    statusBox.setAttribute("data-state", "success");
+
+  } catch (err) {
+    console.error(err);
+    statusBox.textContent = "حدث خطأ أثناء إنشاء المستند:\n" + err.message;
+    statusBox.setAttribute("data-state", "error");
+  } finally {
+    btnConvert.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
