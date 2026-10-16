@@ -525,6 +525,14 @@ body { padding: 24px 16px 64px; }
 
       <div style="margin-top: 10px;">
         <label class="toggle-label">
+          <input id="optSkipFrontMatter" type="checkbox" checked>
+          <span>استثناء بطاقة الكتاب وفهرس الموضوعات (البدء مباشرة من نص الكتاب كالنموذج الأصلي)</span>
+        </label>
+        <label class="toggle-label">
+          <input id="optRemovePageNumbers" type="checkbox" checked>
+          <span>حذف أرقام الصفحات من صلب النص (مثل: "الصفحة: 10") والاعتماد على ترقيم التذييل</span>
+        </label>
+        <label class="toggle-label">
           <input id="optPageBreak" type="checkbox" checked>
           <span>بدء كل فصل رئيسي في صفحة جديدة (Page Break)</span>
         </label>
@@ -614,6 +622,8 @@ const downloadLink = document.getElementById("downloadLink");
 
 const fontFamilySelect = document.getElementById("fontFamilySelect");
 const fontSizeSelect = document.getElementById("fontSizeSelect");
+const optSkipFrontMatter = document.getElementById("optSkipFrontMatter");
+const optRemovePageNumbers = document.getElementById("optRemovePageNumbers");
 const optPageBreak = document.getElementById("optPageBreak");
 const optCoverPage = document.getElementById("optCoverPage");
 const optGoldenSettings = document.getElementById("optGoldenSettings");
@@ -644,6 +654,32 @@ function isJunk(text) {
 
 function isNumberPrefix(text) {
   return /^[0-9٠-٩]+[\s\-–—ـ]*$/.test(cleanText(text));
+}
+
+
+function isPageMarkerLine(text) {
+  const t = cleanText(text);
+  if (!t) return false;
+  return /^(\[|\()?(\s*الصفحة|\s*صفحة|\s*ص)\s*[:：\-–]?\s*[0-9٠-٩]+(\s*\]|\))?$/i.test(t);
+}
+
+function extractPageNumber(text) {
+  const m = String(text || "").match(/[0-9٠-٩]+/);
+  if (m) {
+    return Number(toWesternDigits(m[0]));
+  }
+  return null;
+}
+
+function toWesternDigits(s) {
+  return String(s).replace(/[٠-٩۰-۹]/g, function (d) {
+    return "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹".indexOf(d) % 10;
+  });
+}
+
+function isFrontMatterTitle(title) {
+  const t = cleanText(title).replace(/[ً-ٰٟ]/g, "");
+  return /^(بطاقة الكتاب|فهرس الموضوعات|فهرس المحتويات|مقدمة التحقيق|معلومات الكتاب|الفهرس|فهرس)/.test(t);
 }
 
 function isStructuralPrefix(text) {
@@ -816,10 +852,18 @@ function extractBlocksFromHtml(htmlStr) {
     if (!isJunk(text)) {
       const parts = text.split(/\n+/).map(cleanText).filter(x => !isJunk(x));
       for (const p of parts) {
-        blocks.push({
-          type: "paragraph",
-          text: p
-        });
+        if (isPageMarkerLine(p)) {
+          const pageNum = extractPageNumber(p);
+          blocks.push({
+            type: "pagebreak",
+            page: pageNum
+          });
+        } else {
+          blocks.push({
+            type: "paragraph",
+            text: p
+          });
+        }
       }
     }
   }
@@ -898,8 +942,9 @@ function makeCoverPage(opts) {
   if (opts.authorName) {
     lines.push({ text: "المؤلف: " + opts.authorName, size: 26, bold: false, before: 800 });
   }
-  lines.push({ text: opts.spineCount + " فصل / قسم مصدري", size: 22, bold: false, before: 1600 });
-  lines.push({ text: "تم التحويل محليًا بواسطة turath2docx (نسخة EPUB)", size: 18, bold: false, before: 600 });
+  const countLabel = opts.printedPageCount ? `${opts.printedPageCount} صفحة مصدرية` : `${opts.spineCount} فصل / قسم مصدري`;
+  lines.push({ text: countLabel, size: 22, bold: false, before: 1600 });
+  lines.push({ text: "المصدر: كتاب إلكتروني EPUB (نسخة 1:1 عن الطبعة الأصلية)", size: 18, bold: false, before: 600 });
   lines.push({ text: "نسخة منسقة بدقة وفق معايير التراث الذهبية", size: 18, bold: false, before: 400 });
 
   return lines.map(line => {
@@ -927,7 +972,8 @@ function emptyFooter() {
 }
 
 function makeFooter(volStr, fontName) {
-  const footerText = volStr ? `الجزء ${volStr} | الصفحة {{PAGE}}` : `الصفحة {{PAGE}}`;
+  const volNumber = volStr || "1";
+  const footerText = `الجزء ${volNumber} | الصفحة {{PAGE}}`;
   return new docx.Footer({
     children: [
       new docx.Paragraph({
@@ -1020,7 +1066,7 @@ async function patchRunProps(blob) {
   });
 }
 
-async function patchFooterField(blob) {
+async function patchFooterField(blob, startPageNum) {
   const zip = await JSZip.loadAsync(blob);
   const names = Object.keys(zip.files).filter(n => /^word\/footer\d+\.xml$/.test(n));
   for (const name of names) {
@@ -1038,7 +1084,7 @@ async function patchFooterField(blob) {
       const after = fullText.slice(idx + "{{PAGE}}".length);
       let out = "";
       if (before) out += "<w:r>" + rpr + '<w:t xml:space="preserve">' + before + "</w:t></w:r>";
-      out += '<w:fldSimple w:instr=" PAGE "><w:r>' + rpr + "<w:t>1</w:t></w:r></w:fldSimple>";
+      out += '<w:fldSimple w:instr=" PAGE "><w:r>' + rpr + "<w:t>" + (startPageNum || 1) + "</w:t></w:r></w:fldSimple>";
       if (after) out += "<w:r>" + rpr + '<w:t xml:space="preserve">' + after + "</w:t></w:r>";
       return out;
     });
@@ -1176,9 +1222,14 @@ btnConvert.addEventListener("click", async () => {
     const needCoverPage = optCoverPage.checked;
     const needGoldenSettings = optGoldenSettings.checked;
 
+    const skipFrontMatter = optSkipFrontMatter.checked;
+    const removePageNumbers = optRemovePageNumbers.checked;
+
     const spineFiles = parsedEpubData.spineFiles;
     const totalSpine = spineFiles.length;
     const allChapters = [];
+    let detectedFirstPage = null;
+    let printedPageCount = 0;
 
     // Parse each spine file
     for (let idx = 0; idx < totalSpine; idx++) {
@@ -1190,6 +1241,24 @@ btnConvert.addEventListener("click", async () => {
       if (fileObj) {
         const htmlStr = await fileObj.async("string");
         const blocks = extractBlocksFromHtml(htmlStr);
+
+        const firstHeading = blocks.find(b => b.type === "heading");
+        const isFrontMatter = firstHeading && isFrontMatterTitle(firstHeading.text);
+
+        if (skipFrontMatter && isFrontMatter) {
+          console.log(`[EPUB] تم استثناء صفحة الفهرس/البطاقة: "${firstHeading.text}"`);
+          continue;
+        }
+
+        for (const b of blocks) {
+          if (b.type === "pagebreak" && b.page) {
+            printedPageCount++;
+            if (detectedFirstPage === null) {
+              detectedFirstPage = b.page;
+            }
+          }
+        }
+
         if (blocks.length > 0) {
           allChapters.push(blocks);
         }
@@ -1218,6 +1287,9 @@ btnConvert.addEventListener("click", async () => {
 
     const sections = [];
 
+    const firstPrintedPage = detectedFirstPage || 1;
+    console.log(`[EPUB] firstPrintedPage=${firstPrintedPage}, printedPageCount=${printedPageCount}`);
+
     // 1. Cover / Title Page
     if (needCoverPage) {
       sections.push({
@@ -1231,6 +1303,7 @@ btnConvert.addEventListener("click", async () => {
           bookTitle: parsedEpubData.bookTitle,
           authorName: parsedEpubData.authorName,
           spineCount: totalSpine,
+          printedPageCount: printedPageCount > 0 ? printedPageCount : allChapters.length,
           fontFamily
         })
       });
@@ -1242,14 +1315,27 @@ btnConvert.addEventListener("click", async () => {
 
     for (let cIdx = 0; cIdx < allChapters.length; cIdx++) {
       const chapterBlocks = allChapters[cIdx];
+      let pendingPageBreak = false;
+
       for (let bIdx = 0; bIdx < chapterBlocks.length; bIdx++) {
         const block = chapterBlocks[bIdx];
-        if (block.type === "pagebreak") continue;
 
-        // Is page start?
+        if (block.type === "pagebreak") {
+          pendingPageBreak = true;
+          continue;
+        }
+
+        if (removePageNumbers && isPageMarkerLine(block.text)) {
+          pendingPageBreak = true;
+          continue;
+        }
+
         const isChapterStart = (bIdx === 0);
-        const isDocStart = (cIdx === 0 && bIdx === 0 && !needCoverPage);
-        const shouldBreak = needPageBreak && isChapterStart && !isDocStart;
+        const isDocStart = (cIdx === 0 && bookChildren.length === 0);
+        const shouldBreak = !isDocStart && (
+          (needPageBreak && isChapterStart) || pendingPageBreak
+        );
+        pendingPageBreak = false;
 
         bookChildren.push(
           makeParagraph(block, shouldBreak, fontFamily, bodyFontSize)
@@ -1263,13 +1349,13 @@ btnConvert.addEventListener("click", async () => {
         ...sectionProps,
         page: {
           ...sectionProps.page,
-          pageNumbers: { start: 1 }
+          pageNumbers: { start: firstPrintedPage }
         }
       },
       footers: {
-        default: makeFooter(null, fontFamily),
-        even: makeFooter(null, fontFamily),
-        first: makeFooter(null, fontFamily)
+        default: makeFooter("1", fontFamily),
+        even: makeFooter("1", fontFamily),
+        first: makeFooter("1", fontFamily)
       },
       children: bookChildren
     });
@@ -1290,7 +1376,7 @@ btnConvert.addEventListener("click", async () => {
 
       setProgress(95, "إزالة محددات الحجم المعقدة (szCs & bCs) وإدراج حقول الترقيم الحية...");
       const propsBlob = await patchRunProps(settingsBlob);
-      finalBlob = await patchFooterField(propsBlob);
+      finalBlob = await patchFooterField(propsBlob, firstPrintedPage);
     }
 
     setProgress(100, "✓ اكتمل التحويل بنجاح!");
@@ -1330,4 +1416,4 @@ btnConvert.addEventListener("click", async () => {
 });
 </script>
 </body>
-  </html>
+</html>
