@@ -660,7 +660,15 @@ function isNumberPrefix(text) {
 function isPageMarkerLine(text) {
   const t = cleanText(text);
   if (!t) return false;
-  return /^(\[|\()?(\s*الصفحة|\s*صفحة|\s*ص)\s*[:：\-–]?\s*[0-9٠-٩]+(\s*\]|\))?$/i.test(t);
+  // matches "الصفحة: 10", "صفحة 10", "ص: 10", "[ص: 10]"
+  if (/^(\[|\()?(\s*الصفحة|\s*صفحة|\s*ص)\s*[:：\-–]?\s*[0-9٠-٩]+(\s*\]|\))?$/i.test(t)) {
+    return true;
+  }
+  // matches standalone page markers like "٢ -", "3 -", "١٥ -", "[ 12 ]", "( 12 )"
+  if (/^(\[|\()?\s*[0-9٠-٩]+\s*[\-–—ـ]?\s*(\]|\))?$/.test(t) && t.length <= 8) {
+    return true;
+  }
+  return false;
 }
 
 function extractPageNumber(text) {
@@ -695,6 +703,16 @@ function smartMerge(blocks) {
   while (i < blocks.length) {
     const current = blocks[i];
     const text = cleanText(current.text);
+
+    // Merge number prefix like "٢ -" with following heading like "الأمر" -> "٢ - الأمر"
+    if (isNumberPrefix(text) && i + 1 < blocks.length && blocks[i + 1].type === "heading") {
+      out.push({
+        type: "heading",
+        text: text + " " + cleanText(blocks[i + 1].text)
+      });
+      i += 2;
+      continue;
+    }
 
     if (
       current.type !== "heading" &&
